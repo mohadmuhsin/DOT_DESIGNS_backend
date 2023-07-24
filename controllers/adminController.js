@@ -6,14 +6,23 @@ const Desiger = require("../models/designer");
 const Design = require("../models/design");
 const Admin = require("../models/admin");
 const category = require("../models/category");
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: 'dgusa5uo6',
+  api_key: '648336148627449',
+  api_secret: 'Hd3muvgt9ibvWpGEGVUq71b8U4E'
+});
+
 
 module.exports = {
   login: async (req, res) => {
     try {
       const { username } = req.body;
       const Password = req.body.password;
-
-      const admin = await Admin.findOne({ email: username });
+      console.log(req.body);
+     c =  await Admin.find()
+      console.log(c,"dkldkfj");
+      const admin = await Admin.findOne({ userName: username });
       if (!admin) {
         return res.status(404).send({ message: "No user Exist" });
       }
@@ -33,6 +42,7 @@ module.exports = {
       return res.status(500).send({ message: "Server Error!" });
     }
   },
+
   load_admin: async (req, res) => {
     try {
       const cookie = req.cookies["jwt"];
@@ -52,6 +62,7 @@ module.exports = {
       return res.status(500).send({ message: "server error" });
     }
   },
+
   add_category: async (req, res) => {
     try {
       const { category, image } = req.body;
@@ -62,6 +73,7 @@ module.exports = {
       const newCategory = await new Category({
         name: category,
         image: image,
+        verified:true
       }).save();
       if (!newCategory) {
         return res.status(409).send({ message: "internal server error" });
@@ -81,8 +93,8 @@ module.exports = {
     } catch (error) {
       return res.status(500).send({message:"server Error"})
     }
-  }
-  ,
+  },
+
   get_category:async(req,res)=>{
     try {
       const {id} = req.params
@@ -95,25 +107,75 @@ module.exports = {
       return res.status(500).send({message:"server Error"})
     }
   },
+
   edit_category:async (req,res)=>{
     try {
-      const {name,image} = req.body
-      console.log(req.body,"klsfjsdlfkjfldsk");
-
+      const {data,categoryId} = req.body
+      const updat = await Category.updateOne({_id:categoryId},{$set:{name:data.name,image:data.image}})
+      return res.status(200).send({message:"Category upadated Successfully"})
 
     } catch (error) {
       return res.status(500).send({message:"Server Error"})
     }
   },
+
   getPendingRequest:async (req,res)=>{
     try {
       const category = await Category.find({verified:false})
+      const length = category.length
       return res.send(category)
       
     } catch (error) {
       return res.status(500).send({message:"Server Error"})
     }
+  },
+
+  approveCategory:async(req,res)=>{
+    const {name,image} = req.body
+    console.log(name);
+    const exist = await Category.findOne({name:name,verified:true})
+    if(exist){
+        return res.status(409).send({ message: "Category already exists" });
+    }
+   const update =  await Category.updateOne({name:name},{$set:{verified:true}})
+   console.log(update,'kl');
+    if(!update){
+      return res.status(422).send({message:"Category is not approved"})
+    } 
+    return res.status(200).send({message:"Category approved"})
+  },
+
+  dropCategory:async(req,res)=>{
+    try {
+      console.log("kfsldsl");
+      const {id} = req.params
+     const category = await Category.findOne({_id:id})
+      cloudinary.uploader.destroy(category._id, (error, result) => {
+        if (error) {
+          return res.status(404).send({message:"Not Found"})
+        } 
+      });
+      const result = await Category.deleteOne({ _id: id });
+      return res.send({message:"Category Deleted"})
+    } catch (error) {
+      return res.status(500).send({message:"Sever Error"})
+    }
+  },
+
+  rejectCategoryApproval:async(req,res)=>{
+    try {
+      console.log("dlkflsdkjfsjf");
+    const {id}  = req.params
+      const delet = await Category.deleteOne({_id:id})
+      if(!delet){
+        return res.status(404).send({message:'Deletion failed: Item not found'})
+      }
+      return res.status(200).send({message:"'Deletion successful:"})
+    } catch (error) {
+      return res.status(500).send({message:"Sever Error"})
+    }
   }
+
   ,
   logout: async (req, res) => {
     try {

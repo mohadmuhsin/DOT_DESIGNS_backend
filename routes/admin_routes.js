@@ -10,6 +10,9 @@ router.get('/getCategories',adminController.getCategories)
 router.get('/get_category/:id',adminController.get_category)
 router.post('/edit_category',adminController.edit_category)
 router.get('/getPendingRequest',adminController.getPendingRequest)
+router.patch('/approveCategory',adminController.approveCategory)
+router.delete('/dropCategory/:id',adminController.dropCategory)
+router.delete('/rejectCategoryApproval/:id',adminController.rejectCategoryApproval)
 
 
 module.exports = router;

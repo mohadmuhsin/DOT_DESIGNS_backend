@@ -3,11 +3,23 @@ const sendEmial = require("../utils/sendEmial");
 const Token = require("../models/token");
 const Design = require("../models/design");
 const Category = require("../models/category");
+const Booking = require('../models/bookings')
+
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { emit } = require("process");
 const { log } = require("console");
+const design = require("../models/design");
+
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: 'dgusa5uo6',
+  api_key: '648336148627449',
+  api_secret: 'Hd3muvgt9ibvWpGEGVUq71b8U4E'
+});
+
+
 
 module.exports = {
   signup: async (req, res) => {
@@ -141,6 +153,38 @@ module.exports = {
       res.status(500).json({ error: "Internal server error" });
     }
   },
+  getProfileData: async (req, res) => {
+    try {
+      console.log("dklfklkdlkfjlfjdfsl");
+      const {token} = req.query 
+      const claims = jwt.verify(token, "designer")
+      console.log(claims);
+      const designer = await Designer.findOne({ _id: claims._id })
+      if (!designer) {
+        return res.status(404).send({ message: "Designer not found" })
+      }
+      return res.status(200).send(designer)
+    } catch (error) {
+      return res.status(500).send({message:"Server Error"})
+    }
+  },
+
+  updateProfile: async (req, res) => {
+    try {
+      const { token } = req.body
+      const claims = jwt.verify(token, "designer")
+      console.log(req.body);
+      const {entity_name,address,district,state,mobileNumber,website,bio,image} = req.body.data
+      const update = await Designer.updateOne({_id:claims._id},{$set:{entity_name:entity_name,mobileNumber:mobileNumber,profile:{address:address,district:district,website:website,bio:bio,profilePhoto:image,status:true,state:state}}})
+      if (!update) {
+        return res.status(300).send({message:"Updation Failed"})
+      }
+      return res.status(200).send({message:"Updation Successfull"})
+    } catch (error) {
+      return res.status(500).send({message:"Server Error"})
+    }
+  }
+  ,
 
   retrive_categories: async (req, res) => {
     try {
@@ -168,35 +212,35 @@ module.exports = {
 
   add_design: async (req, res) => {
     try {
-      console.log("herer");
-      const cookie = req.cookies["jwt"];
-      const claims = jwt.verify(cookie, "designer");
+      const {token} = req.body
+      // const cookie = req.cookies["jwt"];
+      const claims = jwt.verify(token, "designer");
       if (!claims) {
         return res.status(401).send({
           message: "unauthenticated",
         });
       }
       const designer = await Designer.findOne({ _id: claims._id });
-      console.log(req.body);
+      console.log(req.body.data);
       const {
         designName,
         materialType,
         finishType,
         category,
-        image,
+        images,
         description,
-      } = req.body;
-      const exist = await Design.findOne({ name: designName });
+      } = req.body.data;
+      const exist = await Design.findOne({ name: designName,designer:claims._id });
       if (exist) {
         return res.status(409).send({ message: "Design already exist" });
       }
       const design = new Design({
         name: designName,
-        materilaType: materialType,
+        materialType: materialType,
         finishType: finishType,
         category: category,
         designer: designer._id,
-        images: image,
+        images: images,
         description: description,
       }).save();
 
@@ -209,10 +253,83 @@ module.exports = {
     }
   },
 
+  updateDesign: async (req, res) => {
+    try {
+      console.log(req.body);
+      const { token,designId } = req.body
+      const claims = jwt.verify(token, "designer");
+
+      if (!claims) {
+        return res.status(401).send({
+          message: "unauthenticated",
+        });
+      }
+      const designer = await Designer.findOne({ _id: claims._id });
+
+       const {
+        designName,
+        materialType,
+        finishType,
+        images,
+        description,
+      } = req.body.data;
+
+      const update = await Design.updateOne({ _id:designId},{$set:{
+        name: designName,
+        materialType: materialType,
+        finishType: finishType,
+        images: images,
+        description: description,
+      }
+      })
+      if (!update) {
+        return res.status(401).send({message:'Updation Failed'})
+      }
+      return res.status(200).send({message:"Updation Successful"})
+    } catch (error) {
+      return res.status(500).send({message:"Sever Error"})
+    }
+  },
+
+  deleteDesignImage: async (req, res) => {
+    try {
+      console.log('kldfjdkl');
+      const { link, designId } = req.query;
+      console.log(req.query);
+      const result = await cloudinary.uploader.destroy(link);
+    
+      const dele = await Design.updateOne({ _id: designId },{ $pull: { images: link } });
+
+      if (!result && dele) {
+        return res.status(404).send({message:"Deletion Error"})
+      }
+      return res.status(200).send({message:"Image Deleted succfully"})
+  } catch (error) {
+    return res.status(500).send({message:"Server Error"})
+  }
+},
+
+  deleteDesign: async (req, res) => {
+    try {
+      const { id } = req.params
+      dele = await Design.deleteOne({ _id: id })
+      if (!dele) {
+        return res.status(404).send({message:'Not Found'})
+      }
+      return res.status(200).send({message:"Deleted Successfully"})
+    } catch (error) {
+      return res.status(500).send({message:"Server Error"})
+    }
+  }
+  ,
+
+
   retrive_Designs: async (req, res) => {
     try {
-      id = req.params.id;
-      const designs = await Design.find({ category: id });
+      id = req.params.id
+    const  token = req.params.token
+      const claims = jwt.verify(token, "designer");
+      const designs = await Design.find({ designer: claims._id, category: id });
       if (designs) {
         return res.status(200).send(designs);
       }
@@ -237,11 +354,8 @@ module.exports = {
   get_design_data: async (req, res) => {
     try {
       const { id } = req.params;
-      console.log(id, "idd");
-      const design = await Design.findOne({ _id: id });
-      console.log(design, "it here");
-      const desiger = await Category.findOne({ _id: design.category });
-      console.log(desiger, "nd tata");
+      const design = await Design.findOne({ _id: id }).populate('category')
+      // const desiger = await Category.findOne({ _id: design.category });
       if (!design) {
         return res.status(404).send({ message: "Not found" });
       }
@@ -250,13 +364,12 @@ module.exports = {
       res.status(500).send({ message: "server error" });
     }
   },
+
   sendRequest: async (req, res) => {
     try {
       const data = ({ Data } = req.body);
-      console.log(data.token, "dkljkfddlfkdfk");
       const category = data.data.category;
       const image = data.data.image;
-      console.log(image,"dflkdflkfj");
       const exist = await Category.findOne({ name: category });
       if (exist) {
         return res.status(409).send({ message: "Category already exists" });
@@ -271,7 +384,8 @@ module.exports = {
       const NewCategory = new Category({
         name:category,
         image:image,
-        requester:desiger._id
+        requester:desiger._id,
+        verified:false
       }).save()
       if(!NewCategory){
         return res.status(409).send({message:'Internal server error'})
@@ -282,6 +396,101 @@ module.exports = {
       return res.status(500).send({ message: "Server Error" });
     }
   },
+
+  getRequests:async (req,res)=>{
+    try {
+      const {token} = req.params
+      const claims =   jwt.verify(token, "designer");
+      const designs = await Booking.find({designerId:claims._id }).populate('designerId').populate('designId').sort({date:-1})
+      if(!designs){
+        return res.status(404).send({message:"There is no pending requests"})
+      }
+      return res.status(200).send(designs)
+    } catch (error) {
+      return res.status(500).send({ message: "Server Error" });
+      
+    }
+  },
+
+  acceptRequest:async (req,res)=>{
+    try {
+      const id  = req.body.id
+      console.log(req.body.id,"booking id");
+      const requests = await Booking.updateOne({_id:id},{$set:{status:"Waiting for Payment"}})
+      if(!requests){
+       return res.send({message:'confirmation failed'})
+      }
+      console.log(requests,"dklkd");
+      return res.status(200).send({message:"confirmation successfull"})
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "Server Error" });
+    }
+  },
+  
+  rejectRequest:async (req,res)=>{
+    try {
+      const id  = req.body.id
+      console.log(req.body.id,"booking id");
+      const requests = await Booking.updateOne({_id:id},{$set:{status:"Consultation Rejected"}})
+      if(!requests){
+       return res.send({message:'Rejection failed'})
+      }
+      console.log(requests,"dklkd");
+      return res.status(200).send({message:"Rejection successfull"})
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "Server Error" });
+    }
+  },
+  consultationDone:async (req,res)=>{
+    try {
+      const id  = req.body.id
+      console.log(req.body.id,"booking id");
+      const requests = await Booking.updateOne({_id:id},{$set:{status:"Consultation Done"}})
+      if(!requests){
+       return res.send({message:'Rejection failed'})
+      }
+      console.log(requests,"dklkd");
+      return res.status(200).send({message:"Rejection successfull"})
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "Server Error" });
+    }
+  },
+  StartProject:async (req,res)=>{
+    try {
+      const id  = req.body.id
+      console.log(req.body.id,"booking id");
+      const requests = await Booking.updateOne({_id:id},{$set:{status:"Work in Progress"}})
+      if(!requests){
+       return res.send({message:'failed to find matched projects'})
+      }
+      console.log(requests,"dklkd");
+      return res.status(200).send({message:"Project started successfull"})
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "Server Error" });
+    }
+  },
+
+  projectCompleted:async (req,res)=>{
+    try {
+      console.log("dlksfklfj");
+      const id  = req.body.id
+      console.log(req.body.id,"booking id");
+      const requests = await Booking.updateOne({_id:id},{$set:{status:"Completed"}})
+      if(!requests){
+       return res.send({message:'submission failed'})
+      }
+      console.log(requests,"dklkd");
+      return res.status(200).send({message:"Completed successfully"})
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "Server Error" });
+    }
+  },
+
 
   logout: async (req, res) => {
     res.cookie("jwt", "", { maxAge: 0 });

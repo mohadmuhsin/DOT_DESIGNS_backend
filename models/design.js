@@ -15,7 +15,7 @@ const designSchema = mongoose.Schema({
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Designer.categories",
+    ref: "Category",
     required: true,
   },
   designer: {

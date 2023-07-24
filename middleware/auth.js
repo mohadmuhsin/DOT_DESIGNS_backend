@@ -9,19 +9,7 @@ module.exports = {
     const isOtherUrl = !isDesignerUrl && !isAdminUrl;
     if (token) {
       try {
-        // if (isDesignerUrl) {
-        //   const decodedToken = jwt.verify(token, "designer"); 
-        //   console.log(decodedToken);
-        //   if (decodedToken) {
-        //     req.designerId = decodedToken._id; 
-            
-        //   }
-        // } else if (isAdminUrl) {
-        //   const decodedToken = jwt.verify(token, "admin");
-        //   if (decodedToken) {
-        //     req.adminId = decodedToken._id; 
-        //   }
-        // } else
+        
          if (isOtherUrl) {
           const decodedToken = jwt.verify(token, "secret");
           if (decodedToken) {
