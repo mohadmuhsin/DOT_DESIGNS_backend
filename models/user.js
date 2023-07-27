@@ -20,7 +20,8 @@ const userSchema = mongoose.Schema({
   verified:{
     type:Boolean,
     default:false
-  }
+  },
+  chat: []
 });
 
 module.exports = mongoose.model("User", userSchema);

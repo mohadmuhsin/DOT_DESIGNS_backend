@@ -98,6 +98,7 @@ module.exports = {
       if (!isPasswordValid) {
         return res.status(401).send({ message: "Invalid password" });
       }
+        const userid = user._id
 
       //register
       const token = jwt.sign({ _id: user._id }, "secret");
@@ -113,13 +114,12 @@ module.exports = {
           }).save();
         }
         const url = `${process.env.BASE_URL}user/${user._id}/verify/${token.token}`;
-        console.log(url);
         await sendEmail(username, "verify Email", url);
-
-        return res.status(400).send({token, message: "An Email sent to your account,Please verify it"});
+        
+        return res.status(400).send({token,userid, message: "An Email sent to your account,Please verify it"});
       } else {
         // Send the token in the response
-        res.status(200).json({ token, data });
+        res.status(200).json({ token, userid });
       }
     } catch (error) {
       console.error(error);
@@ -133,7 +133,6 @@ module.exports = {
         return res.status(401).send({ message: "UnAuthenticated" });
       } else {
         const user = await User.findOne({ _id: req.userId });
-        // console.log(token);
         const { password, ...data } = await user.toJSON();
         return res.status(200).send({ data });
       }
@@ -380,7 +379,7 @@ module.exports = {
         if (exist) {
           return res.status(409).send({message:'Request already sent!'})
         }
-        const permission = await Designer.updateOne({ _id: designer_id}, { $push:{connectionRequest:{ request: true,userId:user,_id: new mongoose.Types.ObjectId(),}}})
+        const permission = await Designer.updateOne({ _id: designer_id}, { $push:{connectionRequest:{ request: "requested",userId:user,_id: new mongoose.Types.ObjectId(),}}})
        console.log(permission,'ls');
         if (!permission) {
         return res.status(404).send({message:'No matching found'})

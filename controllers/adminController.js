@@ -15,6 +15,8 @@ cloudinary.config({
 
 
 module.exports = {
+
+      
   login: async (req, res) => {
     try {
       const { username } = req.body;
@@ -45,9 +47,8 @@ module.exports = {
 
   load_admin: async (req, res) => {
     try {
-      const cookie = req.cookies["jwt"];
-      console.log(cookie);
-      const claims = jwt.verify(cookie, "admin");
+      const {token} = req.query
+      const claims = jwt.verify(token, "admin");
       if (!claims) {
         return res.status(401).send({
           message: "unauthenticated",
@@ -86,9 +87,7 @@ module.exports = {
 
   getCategories:async(req,res)=>{
     try {
-      console.log("here it is");
       const category = await Category.find({verified:true})
-      console.log(category);
       res.status(200).send(category)
     } catch (error) {
       return res.status(500).send({message:"server Error"})
@@ -132,13 +131,11 @@ module.exports = {
 
   approveCategory:async(req,res)=>{
     const {name,image} = req.body
-    console.log(name);
     const exist = await Category.findOne({name:name,verified:true})
     if(exist){
         return res.status(409).send({ message: "Category already exists" });
     }
    const update =  await Category.updateOne({name:name},{$set:{verified:true}})
-   console.log(update,'kl');
     if(!update){
       return res.status(422).send({message:"Category is not approved"})
     } 
@@ -147,7 +144,6 @@ module.exports = {
 
   dropCategory:async(req,res)=>{
     try {
-      console.log("kfsldsl");
       const {id} = req.params
      const category = await Category.findOne({_id:id})
       cloudinary.uploader.destroy(category._id, (error, result) => {
@@ -164,7 +160,6 @@ module.exports = {
 
   rejectCategoryApproval:async(req,res)=>{
     try {
-      console.log("dlkflsdkjfsjf");
     const {id}  = req.params
       const delet = await Category.deleteOne({_id:id})
       if(!delet){

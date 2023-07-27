@@ -4,6 +4,7 @@ const Token = require("../models/token");
 const Design = require("../models/design");
 const Category = require("../models/category");
 const Booking = require('../models/bookings')
+const User = require('../models/user')
 
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -11,6 +12,7 @@ const crypto = require("crypto");
 const { emit } = require("process");
 const { log } = require("console");
 const design = require("../models/design");
+const { url } = require("inspector");
 
 const cloudinary = require('cloudinary').v2;
 cloudinary.config({
@@ -22,6 +24,8 @@ cloudinary.config({
 
 
 module.exports = {
+
+
   signup: async (req, res) => {
     try {
       const { name, email, mobileNumber, password } = req.body;
@@ -40,7 +44,6 @@ module.exports = {
 
       const result = await designer.save();
 
-      console.log(result);
       // jwt
       const { _id } = result.toJSON();
       const token = jwt.sign({ _id: _id }, "designer");
@@ -70,8 +73,8 @@ module.exports = {
   verify: async (req, res) => {
     try {
       const { id, token } = req.body;
-      console.log(id, token);
       const designer = await Designer.findOne({ _id: id });
+      console.log("aaalnd ",designer);
       if (!designer) {
         return res.status(400).send({ message: "Invalid link" });
       }
@@ -93,6 +96,7 @@ module.exports = {
       const Password = req.body.password;
 
       const designer = await Designer.findOne({ email: username });
+      console.log(designer);
       if (!designer) {
         return res.status(404).send({ message: "Designer not found" });
       }
@@ -107,21 +111,20 @@ module.exports = {
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
       });
-      console.log(token, "token");
       const { password, ...data } = await designer.toJSON();
 
       if (!designer.verified) {
-        const token = await Token.findOne({ userId: designer._id });
+         tok = await Token.findOne({ userId: designer._id });
+
 
         if (!tok) {
           tok = await new Token({
-            userId: user._id,
+            userId: designer._id,
             token: crypto.randomBytes(32).toString("hex"),
           }).save();
 
           const url = `${process.env.BASE_URL}designer/${designer._id}/verify/${tok.token}`;
           await sendEmial(username, "verify email", url);
-
           return res.status(400).send({
             token,
             data,
@@ -130,7 +133,9 @@ module.exports = {
         }
       }
       return res.status(200).json({ token, data });
-    } catch (error) {}
+    } catch (error) {
+      console.log(error);
+    }
   },
 
   designer: async (req, res) => {
@@ -155,7 +160,6 @@ module.exports = {
   },
   getProfileData: async (req, res) => {
     try {
-      console.log("dklfklkdlkfjlfjdfsl");
       const {token} = req.query 
       const claims = jwt.verify(token, "designer")
       console.log(claims);
@@ -307,7 +311,7 @@ module.exports = {
   } catch (error) {
     return res.status(500).send({message:"Server Error"})
   }
-},
+  },
 
   deleteDesign: async (req, res) => {
     try {
@@ -322,8 +326,6 @@ module.exports = {
     }
   }
   ,
-
-
   retrive_Designs: async (req, res) => {
     try {
       id = req.params.id
@@ -397,6 +399,20 @@ module.exports = {
     }
   },
 
+  getConsultationCount: async (req, res) => {
+    try {
+      const { token } = req.query
+    const claims = jwt.verify(token,"designer")
+    const count = await Booking.findOne({ designerId: claims._id, status: "Pending" }).count()
+    console.log(count);
+    if (count) {
+      return res.send({count})
+    }
+    } catch (error) {
+     return res.status(500).send({message:"something Went Wrong"}) 
+    }
+  },
+
   getRequests:async (req,res)=>{
     try {
       const {token} = req.params
@@ -443,6 +459,7 @@ module.exports = {
       return res.status(500).send({ message: "Server Error" });
     }
   },
+
   consultationDone:async (req,res)=>{
     try {
       const id  = req.body.id
@@ -458,6 +475,7 @@ module.exports = {
       return res.status(500).send({ message: "Server Error" });
     }
   },
+
   StartProject:async (req,res)=>{
     try {
       const id  = req.body.id
@@ -491,7 +509,58 @@ module.exports = {
     }
   },
 
+  getConnectionRequests: async (req, res) => {
+    try {
 
+      
+      const id = req.params.id
+      const requests = await Designer.findOne({
+        _id: id,
+        connectionRequest: { $elemMatch: { request: 'requested' } }
+      }).populate('connectionRequest.userId');
+      
+      console.log(requests, "dkljsfflljk");
+      if (!requests) {
+        return res.status(404).send({message:"No requests pending"})
+      }
+      return res.status(200).send(requests)
+      
+    } catch (error) {
+      return res.status(500).send({message:"Something went wrong"})
+    }
+  },
+  RejectConnection: async (req, res) => {
+    try {
+      const { id,designer } = req.body
+      const update = await Designer.updateOne(
+        { _id: designer,"connectionRequest._id":id },
+        { $set: { "connectionRequest.$.request": "rejected" } });
+      
+      if (!update) {
+        return res.status(409).send({message:"not updated"})
+      }
+      return res.status(200).send({message:"Request rejected"})
+    } catch (error) {
+      return res.status(500).send({message:"Something went wrong"})  
+    }
+  },
+    
+    
+  acceptConnectionRequest: async (req, res) => {
+  try {
+    const { id, designer } = req.body
+    const update = await Designer.updateOne(
+        { _id: designer,"connectionRequest._id":id },
+        { $set: { "connectionRequest.$.request": "accepted" } });
+      if (!update) {
+        return res.status(409).send({message:"not updated"})
+      }
+      return res.status(200).send({message:"Request accepted"})
+  } catch (error) {
+    return res.status(500).send({message:"Something went Wrong"})
+  }
+}
+,
   logout: async (req, res) => {
     res.cookie("jwt", "", { maxAge: 0 });
     res.send({ message: "logout success" });

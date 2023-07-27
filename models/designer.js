@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const designerSchema = mongoose.Schema({
   entity_name: {
     type: String,
-    required: true, // Corrected typo "requied" to "required"
+    required: true, 
   },
   email: {
     type: String,
@@ -24,8 +24,6 @@ const designerSchema = mongoose.Schema({
   },
   bookings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bookings' }],
   profile: {
-   
-    
     address: {
       type: String,
       required:true
@@ -56,7 +54,8 @@ const designerSchema = mongoose.Schema({
       default:false
     },
   },
-  connectionRequest: [{
+  connectionRequest: [
+    {
        _id:{
         type: mongoose.Types.ObjectId, 
         default: new mongoose.Types.ObjectId, 
@@ -67,21 +66,24 @@ const designerSchema = mongoose.Schema({
         required: true,
       },
       request: {
-        type: Boolean,
-        default:false
+        type: String,
+        default:"No request"
       },
       createdAt: {
         type: Date,
         default : Date.now()
       }
-   }
+    }
   ],
- designs: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Design",
-  }],
-
-  
+  designs: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Design",
+    }
+  ],
+  chat: [
+   
+  ]
 });
 
 module.exports = mongoose.model("Designer", designerSchema);
