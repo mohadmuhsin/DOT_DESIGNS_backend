@@ -1,6 +1,6 @@
 const User = require("../models/user");
 const bcrypt = require("bcryptjs");
-const mongoose = require('mongoose')
+const mongoose = require("mongoose");
 const Token = require("../models/token");
 const sendEmail = require("../utils/sendEmial");
 const crypto = require("crypto");
@@ -8,9 +8,14 @@ const jwt = require("jsonwebtoken");
 const Category = require("../models/category");
 const Design = require("../models/design");
 const token = require("../models/token");
-const Booking = require ('../models/bookings');
+const Booking = require("../models/bookings");
 const Designer = require("../models/designer");
-const stripe = require ('stripe')('sk_test_51NUoowSITa8nEg8xf5Cei42bnVwvBSFziVLtO9n1lhwq8vEQxz7EX4wZfLwmvkOVOIF1fO3DCjdN0RVZkgbb6AfY00oD0vHvcI')
+const nodemailer = require("nodemailer");
+require("dotenv").config();
+
+const stripe = require("stripe")(
+  "sk_test_51NUoowSITa8nEg8xf5Cei42bnVwvBSFziVLtO9n1lhwq8vEQxz7EX4wZfLwmvkOVOIF1fO3DCjdN0RVZkgbb6AfY00oD0vHvcI"
+);
 
 module.exports = {
   // user registration
@@ -67,13 +72,13 @@ module.exports = {
       }
 
       const token = await Token.findOne({
-        userId: id
+        userId: id,
       });
       if (!token) {
         return res.status(400).send({ message: "invalid link" });
       }
-    
-      await User.updateOne({ _id: user._id},{verified: true});
+
+      await User.updateOne({ _id: user._id }, { verified: true });
       await token.deleteOne({ userId: id, token: token });
 
       res.status(200).send({ message: "Email verified successfully" });
@@ -83,43 +88,69 @@ module.exports = {
     }
   },
 
-
-  //   user login
   login: async (req, res) => {
     try {
-      const { username } = req.body;
-      let Password = req.body.password;
-
-      let user = await User.findOne({ email: username });
-      if (!user) {
-        return res.status(404).send({ message: "User not found" });
+      const { Data, method } = req.body;
+      console.log(Data, method, "dkfdsflj");
+      const blocked = await User.findOne({ email: Data.email });
+      if (!blocked.active) {
+        return res.status(500).send({ message: "You are blocked" });
       }
-      const isPasswordValid = await bcrypt.compare(Password, user.password);
-      if (!isPasswordValid) {
-        return res.status(401).send({ message: "Invalid password" });
-      }
-        const userid = user._id
-
-      //register
-      const token = jwt.sign({ _id: user._id }, "secret");
-      const { password, ...data } = await user.toJSON();
-
-      if (!user.verified) {
-        let token = await Token.findOne({ userId: user._id });
-        console.log(token);
-        if (!token) {
-          token = await new Token({
-            userId: user._id,
-            token: crypto.randomBytes(32).toString("hex"),
-          }).save();
+      if (method === "google") {
+        const { email } = req.body.Data;
+        let user = await User.findOne({ email: email });
+        console.log(user);
+        if (!user) {
+          return res.status(404).send({ message: "User not found" });
         }
-        const url = `${process.env.BASE_URL}user/${user._id}/verify/${token.token}`;
-        await sendEmail(username, "verify Email", url);
-        
-        return res.status(400).send({token,userid, message: "An Email sent to your account,Please verify it"});
-      } else {
-        // Send the token in the response
-        res.status(200).json({ token, userid });
+        console.log(user._id, "dkjlskfl");
+        const token = jwt.sign({ _id: user._id }, "secret");
+        const userid = user._id;
+        return res.status(200).json({ token, userid });
+      } else if (method === "normal") {
+        const { email } = req.body.Data;
+        console.log(req.body.Data, "dkfk");
+        let Password = req.body.Data.password;
+
+        let user = await User.findOne({ email: email });
+        if (!user) {
+          return res.status(404).send({ message: "User not found" });
+        }
+        const isPasswordValid = await bcrypt.compare(Password, user.password);
+        if (!isPasswordValid) {
+          return res.status(401).send({ message: "Invalid password" });
+        }
+        const userid = user._id;
+        console.log(userid);
+
+        //register
+        const token = jwt.sign({ _id: user._id }, "secret");
+        console.log(token);
+        const { password, ...data } = await user.toJSON();
+
+        if (!user.verified) {
+          let token = await Token.findOne({ userId: user._id });
+          console.log(token);
+          if (!token) {
+            token = await new Token({
+              userId: user._id,
+              token: crypto.randomBytes(32).toString("hex"),
+            }).save();
+          }
+          const url = `${process.env.BASE_URL}user/${user._id}/verify/${token.token}`;
+          await sendEmail(email, "verify Email", url);
+
+          return res
+            .status(400)
+            .send({
+              token,
+              userid,
+              message: "An Email sent to your account,Please verify it",
+            });
+        } else {
+          // Send the token in the response
+          res.status(200).json({ token, userid });
+        }
       }
     } catch (error) {
       console.error(error);
@@ -127,6 +158,58 @@ module.exports = {
     }
   },
 
+  loginWithGoogle: async (req, res) => {
+    console.log("here it is");
+    console.log(req.body, "kdlfj");
+    try {
+      const { name, email } = req.body.userData;
+      console.log(req.body);
+      const user = new User({
+        username: name,
+        email: email,
+        verified: true,
+      });
+      const result = await user.save();
+      if (!result) {
+        return res.status(400).send({ message: "Forbidden" });
+      }
+      return res.status(200).send(result);
+    } catch (error) {
+      res.status(500).send({ message: "Server error" });
+    }
+  },
+
+  verifyEmailforForget: async (req, res) => {
+    try {
+      const { mail } = req.params;
+      console.log(mail, "maild");
+      const getuser = await User.findOne({ email: mail });
+      if (!getuser) {
+        return res.status(404).send({ message: "Mail is not registered" });
+      }
+      return res.status(200).send(getuser);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
+  changePassword: async (req, res) => {
+    try {
+      const { email, password } = req.body.data;
+      console.log(req.body.data, "klsdjf");
+      console.log(email);
+      const hashed = await bcrypt.hash(password, 10);
+      const update = await User.updateOne(
+        { email: email },
+        { password: hashed }
+      );
+      return res.status(200).send({ message: "Password updated successfully" });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
   user: async (req, res) => {
     try {
       if (!req.userId) {
@@ -142,8 +225,23 @@ module.exports = {
     }
   },
 
+  getUser: async (req, res) => {
+    try {
+    
+      const { id } = req.params
+      console.log(id);
+      const user = await User.findOne({ _id: id })
+      if (user) {
+        return res.status(200).send(user)
+      }
+    
+  } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+  }
+}
+  ,
 
-  retrive_categories:async (req,res)=>{
+  retrive_categories: async (req, res) => {
     try {
       const category = await Category.find({});
       if (category) {
@@ -155,11 +253,9 @@ module.exports = {
     }
   },
 
-
   retrive_DesignbyId: async (req, res) => {
     try {
-      
-      id = req.params.id
+      id = req.params.id;
       console.log(id);
       const designs = await Design.find({ category: id });
       if (designs) {
@@ -171,16 +267,73 @@ module.exports = {
     }
   },
 
-
-  getDesignDetails:async(req,res)=>{
+  getDesignDetails: async (req, res) => {
     try {
-      id= req.params.id
-      const design = await Design.findOne({_id:id})
-      console.log(design,"desiggggggggggggggggn");
-      if(!design){
+      id = req.params.id;
+      const design = await Design.findOne({ _id: id });
+      console.log(design, "desiggggggggggggggggn");
+      if (!design) {
         return res.status(404).send("Not found");
       }
-      return res.status(200).send(design)
+      return res.status(200).send(design);
+    } catch (error) {
+      res.status(500).send({ message: "Server error" });
+    }
+  },
+
+  addTowhishlist: async (req, res) => {
+    try {
+      const { id } = req.body;
+      const user = req.userId;
+      const exist = await User.findOne({ _id: user, wishlist: id });
+      if (exist) {
+        return res
+          .status(409)
+          .send({ message: "Design already in whilshlist" });
+      }
+      const addtowishlist = await User.updateOne(
+        { _id: user },
+        { $push: { wishlist: new mongoose.Types.ObjectId(id) } }
+      );
+      if (addtowishlist) {
+        return res.status(200).send({ message: "Design added to wishlist" });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).send({ message: "Server error" });
+    }
+  },
+
+  getWishlistDesigns: async (req, res) => {
+    try {
+      const userId = req.userId;
+      const designs = await User.find(
+        { _id: userId },
+        { _id: 1, wishlist: 1 }
+      ).populate("wishlist");
+      console.log(designs);
+      if (!designs) {
+        return res.status(404).send({ message: "wishlish is empty" });
+      }
+      return res.status(200).send(designs);
+    } catch (error) {
+      res.status(500).send({ message: "Server error" });
+    }
+  },
+  removeFromWishlist: async (req, res) => {
+    try {
+      const userId = req.userId;
+      const { id } = req.body;
+      const remove = await User.updateOne(
+        { _id: userId },
+        { $pull: { wishlist: id } }
+      );
+      console.log(remove);
+
+      if (!remove) {
+        return res.status(409).send({ message: "something went wrong" });
+      }
+      return res.status(200).send({ message: "Removed successfully" });
     } catch (error) {
       res.status(500).send({ message: "Server error" });
     }
@@ -188,15 +341,14 @@ module.exports = {
 
   bookingRequest: async (req, res) => {
     try {
-      console.log(req.body);
       // consultation should be based on designer charge
-      const { designerId, designId } = req.body
-      const {propertyType, floorPlanType, location, mobileNumber} = req.body.formData
-      console.log(req.userId,'lfdkfld');
-      const user = await User.findOne({ _id: req.userId })
+      const { designerId, designId } = req.body;
+      const { propertyType, floorPlanType, location, mobileNumber } =
+        req.body.formData;
+      const user = await User.findOne({ _id: req.userId });
       console.log(user);
       if (!user) {
-        return res.status(401).send({message:"Un Authenticated user"})
+        return res.status(401).send({ message: "Un Authenticated user" });
       }
 
       const booking = new Booking({
@@ -207,222 +359,247 @@ module.exports = {
         consultationFee: 200,
         designerId: designerId,
         designId: designId,
-        userId : user._id
-      })
+        userId: user._id,
+      });
 
-      const result = await booking.save()
+      const result = await booking.save();
 
       if (!result) {
-        return res.status(500).send({message:"Booking faild, try again!"})
+        return res.status(500).send({ message: "Booking faild, try again!" });
       }
-      console.log(result);
-      return res.status(200).send({result})
-      
-      
+      return res.status(200).send({ result });
     } catch (error) {
-      return res.status(500).send({message:"Server Error"})
+      return res.status(500).send({ message: "Server Error" });
     }
   },
 
   feePayment: async (req, res) => {
     try {
-
-      console.log(req.body);
-      const {stripeToken,amount,id} =req.body
-      const token =stripeToken;
+      const { stripeToken, amount, id } = req.body;
+      const token = stripeToken;
       // Create a PaymentMethod using the token
       const paymentMethod = await stripe.paymentMethods.create({
-        type: 'card',
+        type: "card",
         card: {
           token: token.id,
         },
       });
-  
+
       // Create a PaymentIntent and attach the PaymentMethod to it
       const paymentIntent = await stripe.paymentIntents.create({
         amount: 1000,
-        currency: 'INR',
-        description: 'Design which you choose',
+        currency: "INR",
+        description: "Design which you choose",
         payment_method: paymentMethod.id,
         confirm: true,
       });
-  
-      console.log(paymentIntent);
+
       const user = await User.findOne({ _id: req.userId });
-      const booking = await Booking.updateOne({ _id: id }, { $set: { status: "waiting for consultation", payment: [{date: Date.now(), amount: amount}]}})
-      console.log(booking,"saved dataaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-      if(booking){
-        return res.status(200).send({ res: "success",status:  paymentIntent.status,booking})
+      const booking = await Booking.updateOne(
+        { _id: id },
+        {
+          $set: {
+            status: "waiting for consultation",
+            payment: [{ date: Date.now(), amount: amount }],
+          },
+        }
+      );
+      if (booking) {
+        return res
+          .status(200)
+          .send({ res: "success", status: paymentIntent.status, booking });
       }
-  
     } catch (error) {
       console.error(error);
       res.send({ res: "failure" });
     }
   },
 
-
-  get_last_booking:async (req,res)=>{
+  get_last_booking: async (req, res) => {
     try {
-      const booking = await Booking.find({userId:req.userId}).sort({date:-1}).limit(1)
-      if(!booking){
-        return res.status(404).send({message:"Not Found"})
+      const booking = await Booking.find({ userId: req.userId })
+        .sort({ date: -1 })
+        .limit(1);
+      if (!booking) {
+        return res.status(404).send({ message: "Not Found" });
       }
-      return res.status(200).send(booking)
-    } catch (error) {
-      res.status(500).send({ message: "Server error" });
-      
-    }
-  },
-
-  getbookings:async (req,res)=>{
-    try {
-      const  bookings = await Booking.find({userId:req.userId}).populate('designerId').populate('designId').sort({date:-1})
-      console.log(bookings[0].designId,"populate");
-      return res.status(200).send(bookings)
+      return res.status(200).send(booking);
     } catch (error) {
       res.status(500).send({ message: "Server error" });
     }
   },
 
-  booking_detail:async(req,res)=>{
+  getbookings: async (req, res) => {
     try {
-     const userId = req.userId
-     const bookingId = req.params.id
-     console.log(bookingId,'des',userId,"user");
-     const details = await Booking.findOne({_id:bookingId,userId:userId}).populate('designerId').populate('designId')
-     console.log(details,"kldsfdkl");
-     if(!details){
-      return res.status(404).send("Booking Not found");
-     }
-     return res.status(200).send(details)
+      const bookings = await Booking.find({ userId: req.userId })
+        .populate("designerId")
+        .populate("designId")
+        .sort({ date: -1 });
+      console.log(bookings[0].designId, "populate");
+      return res.status(200).send(bookings);
     } catch (error) {
       res.status(500).send({ message: "Server error" });
-      
     }
-  }
-  ,
-  rejectBooking:async(req,res)=>{
+  },
+
+  booking_detail: async (req, res) => {
     try {
-      const userId = req.userId
-      const bookingId = req.params.id
-      const details = await Booking.updateOne({_id:bookingId},{$set:{status:"Booking Cancelled"}})
-      if(!details){
-       return res.status(404).send({message:"Booking Not found"});
+      const userId = req.userId;
+      const bookingId = req.params.id;
+      //  console.log(bookingId,'des',userId,"user");
+      const details = await Booking.findOne({ _id: bookingId, userId: userId })
+        .populate("designerId")
+        .populate("designId");
+      //  console.log(details,"kldsfdkl");
+      if (!details) {
+        return res.status(404).send("Booking Not found");
       }
-      return res.status(200).send({message:"Booking Cancelled"})
+      return res.status(200).send(details);
+    } catch (error) {
+      res.status(500).send({ message: "Server error" });
+    }
+  },
+  rejectBooking: async (req, res) => {
+    try {
+      const userId = req.userId;
+      const bookingId = req.params.id;
+      const details = await Booking.updateOne(
+        { _id: bookingId },
+        { $set: { status: "Booking Cancelled" } }
+      );
+      if (!details) {
+        return res.status(404).send({ message: "Booking Not found" });
+      }
+      return res.status(200).send({ message: "Booking Cancelled" });
     } catch (error) {
       res.status(500).send({ message: "Server error" });
     }
   },
 
-  rejectPayment:async(req,res)=>{
+  rejectPayment: async (req, res) => {
     try {
-      const userId = req.userId
-      const bookingId = req.params.id
-      const details = await Booking.updateOne({_id:bookingId},{$set:{status:"Payment Rejected"}})
-      if(!details){
-       return res.status(404).send({message:"Booking Not found"});
+      const userId = req.userId;
+      const bookingId = req.params.id;
+      const details = await Booking.updateOne(
+        { _id: bookingId },
+        { $set: { status: "Payment Rejected" } }
+      );
+      if (!details) {
+        return res.status(404).send({ message: "Booking Not found" });
       }
-      return res.status(200).send({message:"Payment Rejected"})
+      return res.status(200).send({ message: "Payment Rejected" });
     } catch (error) {
       res.status(500).send({ message: "Server error" });
     }
   },
 
-  cancellConsultation:async(req,res)=>{
+  cancellConsultation: async (req, res) => {
     try {
-      const userId = req.userId
-      const bookingId = req.params.id
-      const details = await Booking.updateOne({_id:bookingId},{$set:{status:"consultation Rejected"}})
-      if(!details){
-       return res.status(404).send({message:"Booking Not found"});
+      const userId = req.userId;
+      const bookingId = req.params.id;
+      const details = await Booking.updateOne(
+        { _id: bookingId },
+        { $set: { status: "consultation Rejected" } }
+      );
+      if (!details) {
+        return res.status(404).send({ message: "Booking Not found" });
       }
-      return res.status(200).send({message:"consultation Rejected"})
+      return res.status(200).send({ message: "consultation Rejected" });
     } catch (error) {
       res.status(500).send({ message: "Server error" });
     }
   },
 
-  cancellProject:async(req,res)=>{
+  cancellProject: async (req, res) => {
     try {
-      const userId = req.userId
-      const bookingId = req.params.id
-      const details = await Booking.updateOne({_id:bookingId},{$set:{status:"Project Rejected"}})
-      if(!details){
-       return res.status(404).send({message:"Booking Not found"});
+      const userId = req.userId;
+      const bookingId = req.params.id;
+      const details = await Booking.updateOne(
+        { _id: bookingId },
+        { $set: { status: "Project Rejected" } }
+      );
+      if (!details) {
+        return res.status(404).send({ message: "Booking Not found" });
       }
-      return res.status(200).send({message:"Project Rejected"})
+      return res.status(200).send({ message: "Project Rejected" });
     } catch (error) {
       res.status(500).send({ message: "Server error" });
-    }
-  },
-
-  getDesignersList:async (req, res) => {
-    try {
-      const designers = await Designer.find({ verified: true })
-      if (!designers) {
-        return res.status(404).send({message:"Designers not Found"})
-      }
-      return res.status(200).send(designers)
-    } catch (error) {
-      return res.status(500).send({message:"Server Error"})
-    }
-  },
-
-  connectDesigner: async (req, res) => {
-      try {
-        const designer_id = req.params.id
-        const user = req.userId 
-        const exist = await Designer.findOne({ _id: designer_id, connectionRequest:{$elemMatch: { userId: user }} })
-        console.log(exist);
-        if (exist) {
-          return res.status(409).send({message:'Request already sent!'})
-        }
-        const permission = await Designer.updateOne({ _id: designer_id}, { $push:{connectionRequest:{ request: "requested",userId:user,_id: new mongoose.Types.ObjectId(),}}})
-       console.log(permission,'ls');
-        if (!permission) {
-        return res.status(404).send({message:'No matching found'})
-        }
-        return res.status(200).send({message:"Request send Successfully"})
-    } catch (error) {
-      console.log(error);
-      return res.status(500).send({message:"Server Error"})
     }
   },
 
   getDesignerData: async (req, res) => {
     try {
-      const id = req.params.id
-      const designer = await Designer.findOne({ _id: id })
-      const designs = await Design.find({designer : id})
-      if (!designer&&!designs) {
-        return res.status(404).send({message:"Designer not found"})
+      const id = req.params.id;
+      const designer = await Designer.findOne({ _id: id });
+      const designs = await Design.find({ designer: id });
+      const count = await Design.find({ designer: id }).count();
+      if (!designer && !designs) {
+        return res.status(404).send({ message: "Designer not found" });
       }
       const data = {
-        designer,designs
-      }
-      return res.status(200).send(data)
+        designer,
+        designs,
+        count,
+      };
+      return res.status(200).send(data);
     } catch (error) {
-      return res.status(500).send({message:"Server Error"})
+      return res.status(500).send({ message: "Server Error" });
     }
   },
+
   getDesignerDesign: async (req, res) => {
     try {
-      const {catId,designerId} = req.query
+      const { catId, designerId } = req.query;
       console.log(catId, designerId);
-      
-      const data = await Design.find({ category: catId, designer: designerId })
-      console.log(data,"dklk");
+
+      const data = await Design.find({ category: catId, designer: designerId });
+
       if (!data) {
-        return res.status(404).send({message:"No Matched Designs"})
+        return res.status(404).send({ message: "No Matched Designs" });
       }
-      return res.status(200).send(data)
+      return res.status(200).send(data);
     } catch (error) {
       console.log(error);
     }
-  }
-,
+  },
+
+  sendMessage: async (req, res) => {
+    try {
+      const { email, subject, message } = req.body;
+
+      const transporter = nodemailer.createTransport({
+        // Configure email service
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_SENDER,
+          pass: process.env.PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: email,
+        to: process.env.EMAIL_SENDER,
+        subject,
+        text: message,
+      };
+      console.log(mailOptions, "mail ayakknd ta");
+
+      // Send the email
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.log(error);
+          res.status(500).json({ message: "Error sending feedback" });
+        } else {
+          console.log("Feedback sent: " + info.response);
+          res.status(200).json({ message: "Feedback sent successfully" });
+        }
+      });
+    } catch (error) {
+      console.log(error);
+      return res.send({ message: "Something went wrong" });
+    }
+  },
+
   logout: async (req, res) => {
     res.cookie("jwt", "", { maxAge: 0 });
     res.send({ message: "logout success" });

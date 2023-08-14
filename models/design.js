@@ -32,6 +32,27 @@ const designSchema = mongoose.Schema({
     type: String,
     required: true,
   },
+  feedback: [{
+    text: {
+      type: String,
+    },
+    image: {
+      type:String
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    bookingId: {
+      type:mongoose.Schema.Types.ObjectId,
+      ref: 'Bookings'
+    },
+    date: {
+      type: Date,
+      default: Date.now()
+    }
+  }
+  ]
 });
 
 module.exports = mongoose.model("Design", designSchema);

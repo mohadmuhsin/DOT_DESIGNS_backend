@@ -6,6 +6,8 @@ const Desiger = require("../models/designer");
 const Design = require("../models/design");
 const Admin = require("../models/admin");
 const category = require("../models/category");
+const { find } = require("../models/token");
+const Designer = require("../models/designer");
 const cloudinary = require('cloudinary').v2;
 cloudinary.config({
   cloud_name: 'dgusa5uo6',
@@ -58,7 +60,7 @@ module.exports = {
       if (!admin) {
         res.status(401).send({ message: "Un Authorized admin" });
       }
-      return res.status(200).send({ admin });
+      return res.status(200).send( admin );
     } catch (error) {
       return res.status(500).send({ message: "server error" });
     }
@@ -168,6 +170,107 @@ module.exports = {
       return res.status(200).send({message:"'Deletion successful:"})
     } catch (error) {
       return res.status(500).send({message:"Sever Error"})
+    }
+  },
+
+  getCounts: async (req, res) => {
+    try {
+      const designerCount = await Designer.find({}).count()
+      const userCount = await User.find({}).count()
+      const categoryCount = await Category.find({}).count()
+      const designCount = await Design.find({}).count()
+      console.log(designCount, designerCount, userCount, categoryCount, "motham ndallo");
+      if (designCount, designerCount, userCount, categoryCount) {
+        return res.json({designCount, designerCount, userCount, categoryCount})
+      }
+      
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({message:"Sever Error"})
+      
+    }
+  },
+
+  getDesigners: async (req, res) => {
+    try {
+      const designers = await Desiger.find({})
+      if (designers) {
+        return res.json(designers)
+      }
+    } catch (error) {
+      return res.status(500).send({ message: "Server Error" });
+      
+    }
+  },
+
+  blockDesigner: async (req, res) => {
+    try {
+      const { id } = req.params
+      console.log(await Designer.findOne({_id:id}));
+      const block = await Designer.updateOne({ _id: id }, { active: false })
+      if (block) {
+        return res.status(200).send({message:"Blocked successfully"})
+      }
+      
+    } catch (error) {
+      return res.status(500).send({ message: "Server Error" });
+      
+    }
+  },
+  unblockDesigner: async (req, res) => {
+    try {
+      const { id } = req.params
+      const unblock = await Designer.updateOne({ _id: id }, { active: true })
+      console.log(unblock);
+      if (unblock) {
+        return res.status(200).send({message:"unBlocked successfully"})
+      }
+      
+    } catch (error) {
+      return res.status(500).send({ message: "Server Error" });
+    }
+  },
+
+  getUsers: async (req, res) => {
+    try {
+      const users = await User.find()
+      if (users) {
+        return res.status(200).send(users)
+      }
+    } catch (error) {
+      return res.status(500).send({ message: "Server Error" });
+      
+    }
+  },
+
+  blockUsers: async (req, res) => {
+    try {
+
+      const { id } = req.params
+      console.log(id,"dklfkl");
+      const block = await User.updateOne({ _id: id }, { active: false })
+      if (block) {
+        return res.status(200).send({message:"Blocked user successfully"})
+      }
+      
+    } catch (error) {
+      return res.status(500).send({ message: "Server Error" });
+      
+    }
+  },
+
+  unblockUsers: async (req, res) => {
+    try {
+      const { id } = req.params
+      console.log(id,"nullaaaaaaan");
+      const unblock = await User.updateOne({ _id: id }, { active: true })
+      if (unblock) {
+        return res.status(200).send({message:"UNBlocked user successfully"})
+      }
+      
+    } catch (error) {
+      return res.status(500).send({ message: "Server Error" });
+      
     }
   }
 

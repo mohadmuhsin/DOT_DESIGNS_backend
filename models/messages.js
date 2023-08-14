@@ -1,16 +1,19 @@
 const mongoose = require('mongoose')
 const messageSchema = new mongoose.Schema({
-    user:
+    connectionid:{
+       type: mongoose.Schema.Types.ObjectId,
+        ref:"Connection",
+        required:true
+    },
+    sender:
     {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
     },
-    designer:
+    reciever:
     {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Designer"
     },
-    text:
+    message:
     {
         type: String,
         required: true
@@ -18,7 +21,7 @@ const messageSchema = new mongoose.Schema({
     createdAt:
     {
         type: Date,
-        default: Date.now
+        default: Date.now()
     },
 });
 

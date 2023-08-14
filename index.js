@@ -6,17 +6,18 @@ const cookieParser = require("cookie-parser");
 const designerRoute = require("./routes/designer_routes");
 const admin = require("./routes/admin_routes");
 const userRoute = require("./routes/user_routes");
+const chatRoute = require ('./routes/chat_routes')
 const socketIO = require('socket.io');
 const Message = require("./models/messages");
 const jwt = require("jsonwebtoken");
-
-
-
+const intializeSocket = require('./socket/socket')
 const app = express();
 
 const server =  app.listen(3000, () => {
   console.log("App is listning on port 3000");
 });
+
+intializeSocket(server)
 // <------------------mongoose connection------------------->
 mongoose
   .connect(process.env.MONGO, {
@@ -45,44 +46,54 @@ app.use(express.json());
 app.use("/", userRoute);
 app.use("/designer", designerRoute);
 app.use("/admin", admin);
+app.use('/chat', chatRoute)
+
 
 // <----------------socket.io-------------------->
-const io = socketIO(server, {
-  cors:'*'
-});
+// const io = socketIO(server, {
+//   cors:'*'
+// });
 
-io.on('connection', (socket) => {
-  console.log('A user connected');
+// const connectedUsers = new Map();
 
-  socket.on('message', (data) => {
-    console.log('Received message from client:', data);
-    // const { user } = data
+// io.on('connection', (socket) => {
+//   console.log('A user connected',socket.id);
 
+//   socket.on('set_user', (userId) => {
+//   console.log('Setting user with ID:', userId);
+//   connectedUsers.set(userId, socket);
+//   // console.log('Connected users Map:', connectedUsers);
+// });
+
+//   socket.on('message', (data) => {
+//     console.log('Received message from client:', data);
+//     const { receiverId, message } = data;
     
-    const message = new Message({
-      user: data.user,
-      designer: data.designer,
-      text: data.text,
-    });
+//      const receiverSocket = connectedUsers.get(receiverId);
+// console.log(receiverSocket,"vallathiim mnd=");
+//     if (receiverSocket) {
+       
+//       receiverSocket.emit('new_message', { senderId: socket.id, message });
+//     } else {
+//       // Handle the case when the receiver is not online
+//       console.log(`Receiver ${receiverId} is not online.`);
+//     }
 
-   const result = message.save()
-      if (!result) {
-        console.error("Error saving message:", err);
-      } else {
-        console.log("Message saved to database:", message);
-    }
-    
-    io.in(data.user).emit("new_message", message);
-    io.in(data.designer).emit("new_message", message);
-    // io.emit('new_message', { text: data.text });
-  });
+//     // io.to(reciever.socketId).emit("message", data);
+//   });
 
-  socket.on('disconnect', () => {
-    console.log('A user disconnected');
-  });
-});
-
-
+//  socket.on('disconnect', () => {
+//     console.log('User disconnected:', socket.id);
+//     connectedUsers.forEach((value, key) => {
+//       if (value === socket) {
+//         connectedUsers.delete(key);
+//       }
+//     });
+//   });
+// });
 
 
-module.exports = { app, io };
+
+
+
+module.exports = { app };

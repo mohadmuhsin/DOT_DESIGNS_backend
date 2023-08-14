@@ -22,7 +22,6 @@ const designerSchema = mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  bookings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bookings' }],
   profile: {
     address: {
       type: String,
@@ -81,9 +80,19 @@ const designerSchema = mongoose.Schema({
       ref: "Design",
     }
   ],
-  chat: [
-   
-  ]
+  IsPremium: {
+    type: Boolean,
+    default:false
+  },
+  PremiumStartDate: {
+    type: Number,
+    default:null
+  },
+  active: {
+    type: Boolean,
+    default:true
+  }
 });
 
-module.exports = mongoose.model("Designer", designerSchema);
+const Designer = mongoose.model("Designer", designerSchema);
+module.exports = Designer

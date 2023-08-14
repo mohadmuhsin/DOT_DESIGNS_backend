@@ -11,17 +11,34 @@ const userSchema = mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+   
   },
   mobileNumber: {
     type: Number,
-    required: true,
   },
   verified:{
     type:Boolean,
     default:false
   },
-  chat: []
+  chat: [],
+  connectedDesigners: [{
+   
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Designer",
+   }
+  ],
+  wishlist: [{
+
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Design",
+          
+  }],
+  active: {
+    type: Boolean,
+    default:true
+  }
 });
 
-module.exports = mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
+
+module.exports = User

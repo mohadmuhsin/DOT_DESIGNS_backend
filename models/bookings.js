@@ -38,7 +38,7 @@ const bookingSchema = mongoose.Schema({
   date: {
     type: Date,
     default:Date.now()
-      } ,
+      },
       status:{
         type:String,
         default:'Pending'
@@ -59,5 +59,5 @@ const bookingSchema = mongoose.Schema({
       ]
          
 })
-
-module.exports = mongoose.model("Bookings",bookingSchema)
+const Booking = mongoose.model("Bookings",bookingSchema)
+module.exports = Booking
