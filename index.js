@@ -34,7 +34,7 @@ mongoose
 // <------------------cors-------------------->
 app.use(cors({
     credentials: true,
-    origin: ["http://localhost:4200"],
+    origin: ["https://dotdesigns.netlify.app"],
   })
 );
 
