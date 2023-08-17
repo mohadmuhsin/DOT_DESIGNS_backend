@@ -14,12 +14,12 @@ module.exports = {
           const designers = await Designer.find({ verified: true }).sort({ IsPremium: -1 })
           console.log(designers,"sorted");
             const user = await User.findOne ({_id:userId})
-        if (!designers||!user) {
+          if (!designers||!user) {
             return res.status(404).send({message:"Designers not Found"})
-        }
-        return res.status(200).send({designers,user})
+          }
+          return res.status(200).send({designers,user})
         } catch (error) {
-        return res.status(500).send({message:"Server Error"})
+          return res.status(500).send({message:"Server Error"})
         }
     },
 
@@ -37,15 +37,14 @@ module.exports = {
         return res.status(404).send({message:'No matching found'})
         }
         return res.status(200).send({message:"Request send Successfully"})
-        } catch (error) {
+      } catch (error) {
         console.log(error);
         return res.status(500).send({message:"Server Error"})
-    }
+      }
     },
      
     getConnectionRequests: async (req, res) => {
         try {
-
         const id = req.params.id
         const requests = await Designer.findOne({
             _id: id,
@@ -63,33 +62,33 @@ module.exports = {
         }
     },
 
- acceptConnectionRequest: async (req, res) => {
-     try {
-       const { id, designer, userId } = req.body
-       console.log(req.body);
-         console.log('ithippoet');
-       const exist = await User.findOne({ _id: userId, connectedDesigners: designer })
-       console.log(exist,"lkklkk")
-      if (exist) {
-          return res.status(409).send({message:"Already connected"})
+    acceptConnectionRequest: async (req, res) => {
+      try {
+        const { id, designer, userId } = req.body
+        console.log(req.body);
+          console.log('ithippoet');
+        const exist = await User.findOne({ _id: userId, connectedDesigners: designer })
+        console.log(exist,"lkklkk")
+        if (exist) {
+            return res.status(409).send({message:"Already connected"})
+        }
+        const update = await Designer.updateOne(
+          { _id: designer,"connectionRequest._id":id },
+          { $set: { "connectionRequest.$.request": "accepted" } });
+        const userConnect = await User.updateOne({_id:userId},{$addToSet: { connectedDesigners: designer }},
+        { new: true })
+        console.log(userConnect,"user update");
+        if (!update|| !userConnect) {
+          return res.status(409).send({message:"not updated"})
+        }
+        
+        return res.status(200).send({message:"Request accepted"})
+      } catch (error) {
+        return res.status(500).send({message:"Something went Wrong"})
       }
-    const update = await Designer.updateOne(
-        { _id: designer,"connectionRequest._id":id },
-        { $set: { "connectionRequest.$.request": "accepted" } });
-    const userConnect = await User.updateOne({_id:userId},{$addToSet: { connectedDesigners: designer }},
-      { new: true })
-       console.log(userConnect,"user update");
-      if (!update|| !userConnect) {
-        return res.status(409).send({message:"not updated"})
-      }
-      
-      return res.status(200).send({message:"Request accepted"})
-  } catch (error) {
-    return res.status(500).send({message:"Something went Wrong"})
-  }
- },
+    },
 
-    RejectConnection: async (req, res) => {
+  RejectConnection: async (req, res) => {
     try {
       const { id,designer } = req.body
       const update = await Designer.updateOne(
