@@ -633,6 +633,25 @@ module.exports = {
       return res.status(500).send({ message: "Server Error" });
     }
   },
+  CancelConsultation: async (req, res) => {
+    try {
+      const id = req.body.id;
+      console.log(req.body.id, "booking id");
+      const requests = await Booking.updateOne(
+        { _id: id },
+        { $set: { status: "Consultation Cancelled" } }
+      );
+      if (!requests) {
+        return res.send({ message: "Rejection failed" });
+      }
+      return res.status(200).send({ message: "Rejection successfull" });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "Server Error" });
+    }
+  }
+
+,
 
   consultationDone: async (req, res) => {
     try {
@@ -660,6 +679,26 @@ module.exports = {
       const requests = await Booking.updateOne(
         { _id: id },
         { $set: { status: "Work in Progress" } }
+      );
+      if (!requests) {
+        return res.send({ message: "failed to find matched projects" });
+      }
+      console.log(requests, "dklkd");
+      return res.status(200).send({ message: "Project started successfull" });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).send({ message: "Server Error" });
+    }
+  },
+
+
+  RejectProject: async (req, res) => {
+    try {
+      const id = req.body.id;
+      console.log(req.body.id, "booking id");
+      const requests = await Booking.updateOne(
+        { _id: id },
+        { $set: { status: "Project Rejected" } }
       );
       if (!requests) {
         return res.send({ message: "failed to find matched projects" });
