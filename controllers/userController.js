@@ -49,7 +49,7 @@ module.exports = {
         token: crypto.randomBytes(32).toString("hex"),
       }).save();
 
-      const url = `${process.env.BASE_URL}user/${user._id}/verify/${tok.token}`;
+      const url = `${process.env.BASE_URL}/user/${user._id}/verify/${tok.token}`;
       console.log(url);
       await sendEmail(email, "verify Email", url);
 
@@ -137,7 +137,7 @@ module.exports = {
               token: crypto.randomBytes(32).toString("hex"),
             }).save();
           }
-          const url = `${process.env.BASE_URL}user/${user._id}/verify/${token.token}`;
+          const url = `${process.env.BASE_URL}/user/${user._id}/verify/${token.token}`;
           await sendEmail(email, "verify Email", url);
 
           return res
