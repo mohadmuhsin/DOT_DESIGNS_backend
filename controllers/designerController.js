@@ -10,10 +10,6 @@ const ObjectId = mongoose.Types.ObjectId;
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const { emit } = require("process");
-const { log } = require("console");
-const design = require("../models/design");
-const { url } = require("inspector");
 const stripe = require("stripe")(
   "sk_test_51NUoowSITa8nEg8xf5Cei42bnVwvBSFziVLtO9n1lhwq8vEQxz7EX4wZfLwmvkOVOIF1fO3DCjdN0RVZkgbb6AfY00oD0vHvcI"
 );
@@ -29,7 +25,9 @@ module.exports = {
   signup: async (req, res) => {
     try {
       const { name, email, mobileNumber, password } = req.body;
+      console.log(req.body,"body");
       const exists = await Designer.findOne({ email: email });
+      console.log(exists,"exitst");
       if (exists) {
         return res.status(409).send({ message: "Designer already exist" });
       }
@@ -41,9 +39,9 @@ module.exports = {
         mobileNumber: mobileNumber,
         password: hash,
       });
-
+      console.log(designer,"ipplo");
       const result = await designer.save();
-
+      console.log(result,"save aaaaaaaaya");
       // jwt
       const { _id } = result.toJSON();
       const token = jwt.sign({ _id: _id }, "designer");
