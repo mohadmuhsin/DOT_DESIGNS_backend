@@ -33,7 +33,7 @@ module.exports = {
       }
 
       const hash = await bcrypt.hash(password, 10);
-      const designer = new Designer({
+      const designer = await new Designer({
         entity_name: name,
         email: email,
         mobileNumber: mobileNumber,
