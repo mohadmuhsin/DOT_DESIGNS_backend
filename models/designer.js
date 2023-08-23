@@ -25,28 +25,22 @@ const designerSchema = mongoose.Schema({
   profile: {
     address: {
       type: String,
-      required:true
     },
     district: {
       type: String,
-      required:true
     },
     state: {
       type: String,
-      required:true
     },
     website:{
       type: String,
-      required:true
     },
     bio: {
       type: String,
-      required:true
     },
     
     profilePhoto: {
       type: String,
-      required:true
     },
     status: {
       type: Boolean,
