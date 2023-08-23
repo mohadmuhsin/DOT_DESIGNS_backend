@@ -38,10 +38,11 @@ module.exports = {
         email: email,
         mobileNumber: mobileNumber,
         password: hash,
-      });
-      console.log(designer,"ipplo");
-      const result = await designer.save();
-      console.log(result,"save aaaaaaaaya");
+      }).save();
+      console.log(designer,"ipplooooooooooo");
+      // const result = await designer
+      console.log(result, "save aaaaaaaaya");
+      
       // jwt
       const { _id } = result.toJSON();
       const token = jwt.sign({ _id: _id }, "designer");
@@ -49,6 +50,7 @@ module.exports = {
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
       });
+      console.log("asdfghjk");
 
       const tok = await new Token({
         userId: designer._id,
