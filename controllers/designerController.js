@@ -57,7 +57,7 @@ module.exports = {
         token: crypto.randomBytes(32).toString("hex"),
       }).save();
 
-      const url = `${process.env.BASE_URL}designer/${designer._id}/verify/${tok.token}`;
+      const url = `${process.env.BASE_URL}/designer/${designer._id}/verify/${tok.token}`;
       await sendEmial(email, "verify emial", url);
       return res.status(201).send({
         token,
@@ -116,7 +116,6 @@ module.exports = {
 
         const { password, ...data } = await designer.toJSON();
         if (!designer.verified) {
-          console.log("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
           tok = await Token.findOne({ userId: designer._id });
 
           if (!tok) {
@@ -125,7 +124,7 @@ module.exports = {
               token: crypto.randomBytes(32).toString("hex"),
             }).save();
           }
-            const url = `${process.env.BASE_URL}designer/${designer._id}/verify/${tok.token}`;
+            const url = `${process.env.BASE_URL}/designer/${designer._id}/verify/${tok.token}`;
             await sendEmial(email, "verify email", url);
             console.log("sendddddddddddddddddddda");
             return res.status(400).send({
