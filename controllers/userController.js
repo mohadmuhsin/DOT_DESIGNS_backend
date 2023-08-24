@@ -92,39 +92,27 @@ module.exports = {
     try {
       const { Data, method } = req.body;
       console.log(Data, method, "dkfdsflj");
-
       const { email } = req.body.Data;
       let user = await User.findOne({ email: email });
         console.log(user);
-        if (!user) {
-          return res.status(404).send({ message: "User not found" });
+      if (!user) {
+        return res.status(404).send({ message: "User not found" });
       }
-      
       const blocked = await User.findOne({ email: Data.email });
       if (!blocked.active) {
         return res.status(500).send({ message: "You are blocked" });
       }
       if (method === "google") {
         const { email } = req.body.Data;
-        // let user = await User.findOne({ email: email });
-        // console.log(user);
-        // if (!user) {
-        //   return res.status(404).send({ message: "User not found" });
-        // }
-        // console.log(user._id, "dkjlskfl");
+       
         const token = jwt.sign({ _id: user._id }, "secret");
         const userid = user._id;
         return res.status(200).json({ token, userid });
-      } else if (method === "normal") {
+      }
+      else if (method === "normal") {
         const { email } = req.body.Data;
         console.log(req.body.Data, "dkfk");
         let Password = req.body.Data.password;
-
-        // let user = await User.findOne({ email: email });
-        // console.log(user,"deataiils")
-        // if (!user) {
-        //   return res.status(404).send({ message: "User not found" });
-        // }
         const isPasswordValid = await bcrypt.compare(Password, user.password);
         if (!isPasswordValid) {
           return res.status(401).send({ message: "Invalid password" });
