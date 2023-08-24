@@ -188,8 +188,14 @@ module.exports = {
       if (!getuser) {
         return res.status(404).send({ message: "Mail is not registered" });
       }
+
+       const tok = await new Token({
+        userId: getuser._id,
+        token: crypto.randomBytes(32).toString("hex"),
+       }).save();
+      
       console.log(getuser,"dkjkfl");
-      const url = `${process.env.BASE_URL}/user/${getuser._id}/verify/${getuser._id}`;
+      const url = `${process.env.BASE_URL}/user/${getuser._id}/verify/${tok.token}`;
       console.log(url);
       await sendEmail(mail, "verify Email", url);
       return res.status(200).send(getuser);
