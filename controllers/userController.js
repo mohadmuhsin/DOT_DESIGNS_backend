@@ -188,7 +188,8 @@ module.exports = {
       if (!getuser) {
         return res.status(404).send({ message: "Mail is not registered" });
       }
-      const url = `${process.env.BASE_URL}/user/${getuser._id}/verify`;
+      console.log(getuser,"dkjkfl");
+      const url = `${process.env.BASE_URL}/user/${getuser._id}/verify/${getuser._id}`;
       console.log(url);
       await sendEmail(mail, "verify Email", url);
       return res.status(200).send(getuser);
