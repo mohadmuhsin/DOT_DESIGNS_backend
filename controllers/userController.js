@@ -113,6 +113,7 @@ module.exports = {
         let Password = req.body.Data.password;
 
         let user = await User.findOne({ email: email });
+        console.log(user,"deataiils")
         if (!user) {
           return res.status(404).send({ message: "User not found" });
         }
