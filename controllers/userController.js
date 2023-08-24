@@ -93,6 +93,7 @@ module.exports = {
       const { Data, method } = req.body;
       console.log(Data, method, "dkfdsflj");
 
+      const { email } = req.body.Data;
       let user = await User.findOne({ email: email });
         console.log(user);
         if (!user) {
