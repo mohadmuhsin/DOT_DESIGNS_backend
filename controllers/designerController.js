@@ -199,7 +199,7 @@ module.exports = {
         token: crypto.randomBytes(32).toString("hex"),
        }).save();
       
-      const url = `${process.env.BASE_URL}/designer/${verify._id}/forgotPassword/${tok.token}`;
+      const url = `${process.env.BASE_URL}/designer/${verify._id}/DforgotPassword/${tok.token}`;
       console.log(url);
       await sendEmial(email, "verify Email", url);
       return res.status(200).send(verify);
