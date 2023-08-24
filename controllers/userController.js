@@ -192,7 +192,7 @@ module.exports = {
         token: crypto.randomBytes(32).toString("hex"),
        }).save();
       
-      const url = `${process.env.BASE_URL}/user/${getuser._id}/forgotPassword/${tok.token}`;
+      const url = `${process.env.BASE_URL}/user/${getuser._id}/verify/${tok.token}`;
       console.log(url);
       await sendEmail(mail, "verify Email", url);
       
