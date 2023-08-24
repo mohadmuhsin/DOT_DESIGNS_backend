@@ -187,11 +187,21 @@ module.exports = {
     try {
       const { email } = req.params;
       const verify = await Designer.findOne({ email: email });
+      console.log(verify,"data");
       if (!verify) {
         return res
           .status(404)
           .send({ message: "Please enter a registred email" });
       }
+
+      const tok = await new Token({
+        userId: verify._id,
+        token: crypto.randomBytes(32).toString("hex"),
+       }).save();
+      
+      const url = `${process.env.BASE_URL}/designer/${verify._id}/forgotPassword/${tok.token}`;
+      console.log(url);
+      await sendEmial(email, "verify Email", url);
       return res.status(200).send(verify);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
