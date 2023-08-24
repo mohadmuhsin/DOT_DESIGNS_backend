@@ -182,8 +182,6 @@ module.exports = {
   verifyEmailforForget: async (req, res) => {
     try {
       const { mail } = req.params;
-      console.log(mail, "maild");
-      
       const getuser = await User.findOne({ email: mail });
       if (!getuser) {
         return res.status(404).send({ message: "Mail is not registered" });
@@ -194,10 +192,10 @@ module.exports = {
         token: crypto.randomBytes(32).toString("hex"),
        }).save();
       
-      console.log(getuser,"dkjkfl");
-      const url = `${process.env.BASE_URL}/user/${getuser._id}/verify/${tok.token}`;
+      const url = `${process.env.BASE_URL}/${getuser._id}/login/${tok.token}`;
       console.log(url);
       await sendEmail(mail, "verify Email", url);
+
       return res.status(200).send(getuser);
     } catch (error) {
       console.log(error);
