@@ -156,8 +156,7 @@ module.exports = {
   },
 
   loginWithGoogle: async (req, res) => {
-    console.log("here it is");
-    console.log(req.body, "kdlfj");
+    
     try {
       const { name, email } = req.body.userData;
       console.log(req.body);
@@ -203,8 +202,7 @@ module.exports = {
   changePassword: async (req, res) => {
     try {
       const { email, password } = req.body.data;
-      console.log(req.body.data, "klsdjf");
-      console.log(email);
+     
       const hashed = await bcrypt.hash(password, 10);
       const update = await User.updateOne(
         { email: email },
@@ -235,7 +233,7 @@ module.exports = {
     try {
     
       const { id } = req.params
-      console.log(id);
+     
       const user = await User.findOne({ _id: id })
       if (user) {
         return res.status(200).send(user)
