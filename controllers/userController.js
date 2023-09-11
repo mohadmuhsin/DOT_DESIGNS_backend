@@ -260,8 +260,9 @@ module.exports = {
   retrive_DesignbyId: async (req, res) => {
     try {
       id = req.params.id;
-      console.log(id);
+      console.log(id,"df");
       const designs = await Design.find({ category: id });
+      console.log(designs);
       if (designs) {
         return res.status(200).send(designs);
       }

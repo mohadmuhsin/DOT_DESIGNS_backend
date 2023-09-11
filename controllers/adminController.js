@@ -89,7 +89,7 @@ module.exports = {
 
   getCategories:async(req,res)=>{
     try {
-      const category = await Category.find({verified:true})
+      const category = await Category.find({ verified: true })
       res.status(200).send(category)
     } catch (error) {
       return res.status(500).send({message:"server Error"})
