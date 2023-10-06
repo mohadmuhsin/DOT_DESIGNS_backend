@@ -25,7 +25,7 @@ module.exports = async (email, subject, text) => {
       subject: subject,
       text: text,
     });
-    console.log(text,"ivde url nd");
+
     console.log("Email sent successfully");
   } catch (error) {
     console.log("Failed to send email");

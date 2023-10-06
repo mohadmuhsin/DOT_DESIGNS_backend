@@ -382,6 +382,7 @@ module.exports = {
     try {
       const { stripeToken, amount, id } = req.body;
       const token = stripeToken;
+      
       // Create a PaymentMethod using the token
       const paymentMethod = await stripe.paymentMethods.create({
         type: "card",
