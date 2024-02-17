@@ -11,31 +11,35 @@ const userSchema = mongoose.Schema({
   },
   password: {
     type: String,
-   
+
   },
   mobileNumber: {
     type: Number,
   },
-  verified:{
-    type:Boolean,
-    default:false
+  verified: {
+    type: Boolean,
+    default: false
+  },
+  google: {
+    type: Boolean,
+    default: false
   },
   chat: [],
   connectedDesigners: [{
-   
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Designer",
-   }
+
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Designer",
+  }
   ],
   wishlist: [{
 
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Design",
-          
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Design",
+
   }],
   active: {
     type: Boolean,
-    default:true
+    default: true
   }
 });
 

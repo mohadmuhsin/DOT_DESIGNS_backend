@@ -58,7 +58,7 @@ module.exports = {
       }).save();
 
       const url = `${process.env.BASE_URL}/designer/${designer._id}/verify/${tok.token}`;
-      await sendEmial(email, "verify emial", url);
+      await sendEmial(email, url);
       return res.status(201).send({
         token,
         message: "An Email send to your account,Please verify it!",
@@ -629,7 +629,6 @@ module.exports = {
   rejectRequest: async (req, res) => {
     try {
       const id = req.body.id;
-      console.log(req.body.id, "booking id");
       const requests = await Booking.updateOne(
         { _id: id },
         { $set: { status: "Consultation Rejected" } }
@@ -647,7 +646,6 @@ module.exports = {
   CancelConsultation: async (req, res) => {
     try {
       const id = req.body.id;
-      console.log(req.body.id, "booking id");
       const requests = await Booking.updateOne(
         { _id: id },
         { $set: { status: "Consultation Cancelled" } }
@@ -667,7 +665,6 @@ module.exports = {
   consultationDone: async (req, res) => {
     try {
       const id = req.body.id;
-      console.log(req.body.id, "booking id");
       const requests = await Booking.updateOne(
         { _id: id },
         { $set: { status: "Consultation Done" } }

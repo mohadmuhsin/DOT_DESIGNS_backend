@@ -55,7 +55,6 @@ module.exports = {
     setDesignerNewMessage: async (req, res) => {
         try {
             const { message, userId, designerId } = req.body
-            console.log(req.body,"it full boody        lllllllllllllllllllllllllllll");
             const messages = new Messages({
                 sender: designerId,
                 reciever: userId,
@@ -95,23 +94,22 @@ module.exports = {
             const { id } = req.body
             const userId = req.userId
             const connectionexsist = await Connection.findOne({
-                    'connections.user': userId,
-                    'connections.designer': id
+                'connections.user': userId,
+                'connections.designer': id
+            });
+            if (connectionexsist) {
+                return  res.status(200).json({ message: "success" })
+
+            } else {
+                let result = new Connection({
+                    connections: {
+                        user: userId,
+                        designer: id
+                    }
                 })
-                if (connectionexsist) {
-
-                  return  res.status(200).json({ message: "success" })
-
-                } else {
-                    let result = new Connection({
-                        connections: {
-                            user: userId,
-                            designer: id
-                        }
-                    })
-                    let data = await result.save()
-                    res.status(200).json(data)
-                }
+                let data = await result.save()
+                res.status(200).json(data)
+            }
 
         } catch (error) {
             return res.status(500).send({message:"Something went werong"})    
@@ -165,6 +163,7 @@ module.exports = {
             if (!data) {
                 return res.status(400).send({message:"Chat not found"})
             }
+            
             const allMessages = await Message.find({connectionid:data._id}).sort('createdAt')
             return res.status(200).send({result:allMessages,cid:data._id,userId:userId})
         } catch (error) {

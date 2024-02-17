@@ -30,7 +30,7 @@ mongoose
 // <------------------cors-------------------->
 app.use(cors({
     credentials: true,
-    origin: ["https://dotdesigns.netlify.app"],
+    origin: process.env.BASE_URL
   })
 );
 

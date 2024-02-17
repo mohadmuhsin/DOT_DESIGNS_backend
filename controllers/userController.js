@@ -2,7 +2,7 @@ const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const Token = require("../models/token");
-const sendEmail = require("../utils/sendEmial");
+const { sendEmail } = require("../utils/sendEmial");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const Category = require("../models/category");
@@ -20,22 +20,36 @@ const stripe = require("stripe")(
 module.exports = {
   // user registration
   signUp: async (req, res) => {
-    const { name, email, mobileNumber, password } = req.body;
+    const { name, email, mobileNumber, password } = req.body.data;
+    const { google } = req.body;
     try {
       const exists = await User.findOne({ email: email });
       if (exists) {
         return res.status(409).send({ message: "User already exists" });
       }
-      const hashed = await bcrypt.hash(password, 10);
-      const user = new User({
-        username: name,
-        email: email,
-        mobileNumber: mobileNumber,
-        password: hashed,
-      });
-      const result = await user.save();
-      console.log(result);
+      let hashed;
+      let user;
+      if (google) {
+        hashed = await bcrypt.hash(req.body.data.id, 10);
+        user = new User({
+          username: name,
+          email: email,
+          google: true,
+          mobileNumber: mobileNumber,
+          password: hashed,
+        });
+      } else {
+        hashed = await bcrypt.hash(password, 10);
+        user = new User({
+          username: name,
+          email: email,
+          mobileNumber: mobileNumber,
+          password: hashed,
+        });
+      }
 
+
+      const result = await user.save();
       const { _id } = result.toJSON();
       const token = jwt.sign({ _id: _id }, "secret");
       // res.cookie("jwt", token, {
@@ -44,18 +58,18 @@ module.exports = {
       // });
 
       // creating random token for email
-      const tok = await new Token({
-        userId: user._id,
-        token: crypto.randomBytes(32).toString("hex"),
-      }).save();
+      if (!google) {
+        const tok = await new Token({
+          userId: user._id,
+          token: crypto.randomBytes(32).toString("hex"),
+        }).save();
 
-      const url = `${process.env.BASE_URL}/user/${user._id}/verify/${tok.token}`;
-      console.log(url);
-      await sendEmail(email, "verify Email", url);
-
+        const url = `${process.env.BASE_URL}/user/${user._id}/verify/${tok.token}`;
+        await sendEmail(email, url);
+      }
       return res.status(201).send({
         token,
-        message: "An Email send to your account,Please verify it!",
+        message: `An Email send to ${email},Please verify it!`,
       });
     } catch (error) {
       console.log(error);
@@ -91,10 +105,8 @@ module.exports = {
   login: async (req, res) => {
     try {
       const { Data, method } = req.body;
-      console.log(Data, method, "dkfdsflj");
       const { email } = req.body.Data;
       let user = await User.findOne({ email: email });
-        console.log(user);
       if (!user) {
         return res.status(404).send({ message: "User not found" });
       }
@@ -103,31 +115,29 @@ module.exports = {
         return res.status(500).send({ message: "You are blocked" });
       }
       if (method === "google") {
-        const { email } = req.body.Data;
-       
+
         const token = jwt.sign({ _id: user._id }, "secret");
         const userid = user._id;
         return res.status(200).json({ token, userid });
       }
       else if (method === "normal") {
         const { email } = req.body.Data;
-        console.log(req.body.Data, "dkfk");
+        if (user.google) {
+          return res.status(400).json({ message: "Please log in with Google." })
+        }
         let Password = req.body.Data.password;
         const isPasswordValid = await bcrypt.compare(Password, user.password);
         if (!isPasswordValid) {
           return res.status(401).send({ message: "Invalid password" });
         }
         const userid = user._id;
-        console.log(userid);
 
         //register
         const token = jwt.sign({ _id: user._id }, "secret");
-        console.log(token);
         const { password, ...data } = await user.toJSON();
 
         if (!user.verified) {
           let token = await Token.findOne({ userId: user._id });
-          console.log(token);
           if (!token) {
             token = await new Token({
               userId: user._id,
@@ -135,7 +145,7 @@ module.exports = {
             }).save();
           }
           const url = `${process.env.BASE_URL}/user/${user._id}/verify/${token.token}`;
-          await sendEmail(email, "verify Email", url);
+          await sendEmail(email, url);
 
           return res
             .status(400)
@@ -151,15 +161,15 @@ module.exports = {
       }
     } catch (error) {
       console.error(error);
-      res.status(500).send({ message: "Server error" });
+      res.status(500).send({
+        message: `Something went wrong, 
+      Please try again` });
     }
   },
 
   loginWithGoogle: async (req, res) => {
-    
     try {
       const { name, email } = req.body.userData;
-      console.log(req.body);
       const user = new User({
         username: name,
         email: email,
@@ -178,21 +188,22 @@ module.exports = {
   verifyEmailforForget: async (req, res) => {
     try {
       const { mail } = req.params;
-      const getuser = await User.findOne({ email: mail });
-      if (!getuser) {
+      const user = await User.findOne({ email: mail });
+      if (!user) {
         return res.status(404).send({ message: "Mail is not registered" });
       }
-
-       const tok = await new Token({
-        userId: getuser._id,
+      if(user.google){
+        return res.status(400).send({message:"Please login with google"})
+      }
+      const tok = await new Token({
+        userId: user._id,
         token: crypto.randomBytes(32).toString("hex"),
-       }).save();
-      
-      const url = `${process.env.BASE_URL}/user/${getuser._id}/forgotPassword/${tok.token}`;
-      console.log(url);
-      await sendEmail(mail, "verify Email", url);
-      
-      return res.status(200).send(getuser);
+      }).save();
+
+      const url = `${process.env.BASE_URL}/user/${user._id}/forgotPassword/${tok.token}`;
+      await sendEmail(mail, url);
+
+      return res.status(200).send(user);
     } catch (error) {
       console.log(error);
       res.status(500).json({ error: "Internal server error" });
@@ -202,7 +213,7 @@ module.exports = {
   changePassword: async (req, res) => {
     try {
       const { email, password } = req.body.data;
-     
+      console.log(password);
       const hashed = await bcrypt.hash(password, 10);
       const update = await User.updateOne(
         { email: email },
@@ -216,6 +227,7 @@ module.exports = {
   },
   user: async (req, res) => {
     try {
+      console.log("here it is");
       if (!req.userId) {
         return res.status(401).send({ message: "UnAuthenticated" });
       } else {
@@ -231,18 +243,18 @@ module.exports = {
 
   getUser: async (req, res) => {
     try {
-    
+
       const { id } = req.params
-     
+
       const user = await User.findOne({ _id: id })
       if (user) {
         return res.status(200).send(user)
       }
-    
-  } catch (error) {
+
+    } catch (error) {
       res.status(500).json({ error: "Internal server error" });
+    }
   }
-}
   ,
 
   retrive_categories: async (req, res) => {
@@ -260,7 +272,7 @@ module.exports = {
   retrive_DesignbyId: async (req, res) => {
     try {
       id = req.params.id;
-      console.log(id,"df");
+      console.log(id, "df");
       const designs = await Design.find({ category: id });
       console.log(designs);
       if (designs) {
@@ -276,7 +288,7 @@ module.exports = {
     try {
       id = req.params.id;
       const design = await Design.findOne({ _id: id });
-      console.log(design, "desiggggggggggggggggn");
+
       if (!design) {
         return res.status(404).send("Not found");
       }
@@ -382,7 +394,7 @@ module.exports = {
     try {
       const { stripeToken, amount, id } = req.body;
       const token = stripeToken;
-      
+
       // Create a PaymentMethod using the token
       const paymentMethod = await stripe.paymentMethods.create({
         type: "card",
